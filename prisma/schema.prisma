@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model bab {
+  id        Int     @id @default(autoincrement())
+  nomor     String? @db.VarChar(10)
+  judul     String? @db.VarChar(150)
+  kelas_id  Int?
+  deskripsi String?
+  kelas     kelas?  @relation(fields: [kelas_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  topik     topik[]
+}
+
+model guru {
+  id           Int      @id @default(autoincrement())
+  nama_lengkap String?  @db.VarChar(100)
+  email        String?  @unique @db.VarChar(100)
+  nip          String?  @unique @db.VarChar(20)
+  password     String?  @db.VarChar(255)
+  no_telepon   String?  @db.VarChar(20)
+  sekolah_id   Int?
+  sekolah      sekolah? @relation(fields: [sekolah_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model kelas {
+  id            Int             @id @default(autoincrement())
+  nama          String?         @db.VarChar(50)
+  sekolah_id    Int?
+  bab           bab[]
+  sekolah       sekolah?        @relation(fields: [sekolah_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  peserta_didik peserta_didik[]
+}
+
+model nilai_quiz {
+  id               Int            @id @default(autoincrement())
+  peserta_didik_id Int?
+  topik_id         Int?
+  hasil_quiz       Json?          @db.Json
+  nilai            Int?
+  jumlah_benar     Int?
+  jumlah_salah     Int?
+  waktu_pengerjaan Int?
+  tanggal_selesai  DateTime?      @db.Timestamp(6)
+  peserta_didik    peserta_didik? @relation(fields: [peserta_didik_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  topik            topik?         @relation(fields: [topik_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model peserta_didik {
+  id           Int          @id @default(autoincrement())
+  nama_lengkap String?      @db.VarChar(100)
+  nisn         String?      @unique @db.VarChar(20)
+  kelas_id     Int?
+  nilai_quiz   nilai_quiz[]
+  kelas        kelas?       @relation(fields: [kelas_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model quiz {
+  id            Int      @id @default(autoincrement())
+  topik_id      Int?
+  nama          String?  @db.VarChar(150)
+  pilihan_ganda Json?    @db.Json
+  jawaban       jawaban?
+  durasi        Int?
+  topik         topik?   @relation(fields: [topik_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model sekolah {
+  id           Int       @id @default(autoincrement())
+  nama         String?   @db.VarChar(100)
+  alamat       String?   @db.VarChar(255)
+  email        String?   @unique @db.VarChar(100)
+  semester     semester?
+  tahun_ajaran String?   @db.VarChar(9)
+  guru         guru[]
+  kelas        kelas[]
+}
+
+model topik {
+  id         Int          @id @default(autoincrement())
+  bab_id     Int?
+  kode       String?      @db.VarChar(5)
+  judul      String?      @db.VarChar(150)
+  deskripsi  String?
+  topik_url  String?      @db.VarChar(255)
+  nilai_quiz nilai_quiz[]
+  quiz       quiz[]
+  bab        bab?         @relation(fields: [bab_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+enum jawaban {
+  A
+  B
+  C
+  D
+}
+
+enum semester {
+  ganjil
+  genap
+}
