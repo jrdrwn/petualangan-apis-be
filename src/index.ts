@@ -142,7 +142,7 @@ app.post(
       'your-secret-key',
     )
 
-    return c.json({ token })
+    return c.json({ token, peserta_didik: pesertaDidik })
   },
 )
 
@@ -465,7 +465,7 @@ app.post(
       'your-secret-key',
     )
 
-    return c.json({ token })
+    return c.json({ token, guru })
   },
 )
 
