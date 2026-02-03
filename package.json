@@ -12,8 +12,10 @@
     "@hono/zod-validator": "^0.7.6",
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
+    "@types/pdfkit": "^0.17.4",
     "dotenv": "^17.2.3",
     "hono": "^4.11.5",
+    "pdfkit": "^0.17.2",
     "pg": "^8.17.2"
   },
   "devDependencies": {

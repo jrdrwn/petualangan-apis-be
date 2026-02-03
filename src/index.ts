@@ -8,6 +8,7 @@ import { jwt, sign } from 'hono/jwt'
 import { logger } from 'hono/logger'
 import { z } from 'zod'
 import type { PrismaClient } from './generated/prisma/client.js'
+import { generateLaporanPdf } from './lib/generateLaporanPdf.js'
 import withPrisma from './lib/prisma.js'
 
 type ContextWithPrisma = {
@@ -40,7 +41,13 @@ app.use(
 app.use(
   '/*',
   except(
-    ['/peserta-didik/login', '/peserta-didik/register', '/sekolah', '/:sekolah_id/kelas', '/guru/login'],
+    [
+      '/peserta-didik/login',
+      '/peserta-didik/register',
+      '/sekolah',
+      '/:sekolah_id/kelas',
+      '/guru/login',
+    ],
     jwt({
       secret: 'your-secret-key',
       alg: 'HS256',
@@ -503,8 +510,6 @@ app.get(
   },
 )
 
-// bab->topik->nilai peserta didik
-// ambil semua bab dan topik walaupun belum dibuka
 app.get(
   '/guru/peserta-didik/:peserta_didik_id/nilai',
   zValidator(
@@ -635,6 +640,85 @@ app.get(
     return c.json(babList)
   },
 )
+
+
+
+// Generate PDF untuk peserta didik sendiri (tanpa auth guru)
+app.get('/peserta-didik/laporan-pdf', withPrisma, async (c) => {
+  const prisma = c.get('prisma')
+  const pesertaDidikId = c.get('jwtPayload').sub as number
+
+  try {
+    const pdfBuffer = await generateLaporanPdf(prisma, pesertaDidikId)
+
+    const pesertaDidik = await prisma.peserta_didik.findUnique({
+      where: { id: pesertaDidikId },
+    })
+
+    const filename = `Laporan_${pesertaDidik?.nama_lengkap?.replace(/\s+/g, '_') || 'Peserta_Didik'}_${Date.now()}.pdf`
+
+    // Convert Buffer to Uint8Array for Response compatibility
+    const uint8Array = new Uint8Array(pdfBuffer)
+
+    return new Response(uint8Array, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+      },
+    })
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    return c.json({ error: errorMessage }, 500)
+  }
+})
+
+app.get(
+  '/guru/laporan-pdf/:peserta_didik_id',
+  zValidator(
+    'param',
+    z.object({
+      peserta_didik_id: z.coerce.number().int().positive(),
+    }),
+  ),
+  withPrisma,
+  async (c) => {
+    const prisma = c.get('prisma')
+    const { peserta_didik_id } = c.req.valid('param')
+    const guru_id = c.get('jwtPayload').sub as number
+
+    try {
+
+      const pdfBuffer = await generateLaporanPdf(prisma, peserta_didik_id, guru_id)
+
+      // Get peserta didik name for filename
+      const pesertaDidik = await prisma.peserta_didik.findUnique({
+        where: { id: peserta_didik_id },
+      })
+
+      if (!pesertaDidik) {
+        return c.json({ error: 'Peserta didik tidak ditemukan' }, 404)
+      }
+
+      const filename = `Laporan_${pesertaDidik.nama_lengkap?.replace(/\s+/g, '_') || 'Peserta_Didik'}_${Date.now()}.pdf`
+
+      // Convert Buffer to Uint8Array for Response compatibility
+      const uint8Array = new Uint8Array(pdfBuffer)
+
+      return new Response(uint8Array, {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+        },
+      })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      return c.json({ error: errorMessage }, 500)
+    }
+  },
+)
+
+// Generate PDF Laporan untuk testing (tanpa auth) - khusus guru
+
 
 serve(
   {
