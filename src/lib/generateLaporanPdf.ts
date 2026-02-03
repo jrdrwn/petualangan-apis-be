@@ -659,7 +659,7 @@ function createPdfDocument(data: LaporanData): Promise<Buffer> {
     );
 
     // Guru name and NIP - centered
-    const guruName = data.guru?.nama_lengkap || "NAMA GURU KELAS";
+    const guruName = data.guru?.nama_lengkap || "                  ";
     const guruNip =
       data.guru?.nip || "........................................";
 
