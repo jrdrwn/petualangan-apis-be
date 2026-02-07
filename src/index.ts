@@ -41,13 +41,7 @@ app.use(
 app.use(
   '/*',
   except(
-    [
-      '/peserta-didik/login',
-      '/peserta-didik/register',
-      '/sekolah',
-      '/:sekolah_id/kelas',
-      '/guru/login',
-    ],
+    ['/peserta-didik/login', '/peserta-didik/register', '/sekolah', '/:sekolah_id/kelas', '/guru/login', '/guru/register'],
     jwt({
       secret: 'your-secret-key',
       alg: 'HS256',
@@ -152,6 +146,64 @@ app.post(
     return c.json({ token, peserta_didik: pesertaDidik })
   },
 )
+
+app.put(
+  '/peserta-didik/profile',
+  zValidator(
+    'json',
+    z.object({
+      nama_lengkap: z.string().min(1).optional(),
+      nisn: z.string().min(1).optional(),
+      kelas_id: z.number().int().positive().optional(),
+    }),
+  ),
+  withPrisma,
+  async (c) => {
+    const prisma = c.get('prisma')
+    const peserta_didik_id = c.get('jwtPayload').sub as number
+    const { nama_lengkap, nisn, kelas_id } = c.req.valid('json')
+
+    const pesertaDidik = await prisma.peserta_didik.update({
+      where: {
+        id: peserta_didik_id,
+      },
+      data: {
+        nama_lengkap,
+        nisn,
+        kelas_id,
+      },
+    })
+
+    return c.json(pesertaDidik)
+  },
+)
+
+app.delete('/peserta-didik/profile', withPrisma, async (c) => {
+  const prisma = c.get('prisma')
+  const peserta_didik_id = c.get('jwtPayload').sub as number
+
+  await prisma.peserta_didik.delete({
+    where: {
+      id: peserta_didik_id,
+    },
+  })
+
+  return c.json({ message: 'Peserta didik deleted successfully' })
+})
+
+app.delete('/peserta-didik/reset', withPrisma, async (c) => {
+  const prisma = c.get('prisma')
+  const peserta_didik_id = c.get('jwtPayload').sub as number
+
+  // Hapus semua nilai_quiz peserta didik
+  await prisma.nilai_quiz.deleteMany({
+    where: {
+      peserta_didik_id,
+    },
+  })
+
+  return c.json({ message: 'Progress reset successfully' })
+})
 
 app.get('/bab/topik', withPrisma, async (c) => {
   const prisma = c.get('prisma')
@@ -438,6 +490,93 @@ app.post(
   },
 )
 
+// register guru
+app.post(
+  '/guru/register',
+  zValidator(
+    'json',
+    z.object({
+      nama_lengkap: z.string().min(1),
+      nip: z.string().min(1),
+      password: z.string().min(1),
+      sekolah_id: z.number().int().positive(),
+    }),
+  ),
+  withPrisma,
+  async (c) => {
+    const prisma = c.get('prisma')
+    const { nama_lengkap, nip, password, sekolah_id } = c.req.valid('json')
+
+    const existingGuru = await prisma.guru.findUnique({
+      where: {
+        nip,
+      },
+    })
+    if (existingGuru) {
+      return c.json({ error: 'NIP already registered' }, 400)
+    }
+
+    const guru = await prisma.guru.create({
+      data: {
+        nama_lengkap,
+        nip,
+        password,
+        sekolah_id,
+      },
+    })
+
+    return c.json(guru)
+  },
+)
+
+app.put(
+  '/guru/profile',
+  zValidator(
+    'json',
+    z.object({
+      nama_lengkap: z.string().min(1).optional(),
+      password: z.string().min(1).optional(),
+      sekolah_id: z.number().int().positive().optional(),
+      email: z.email().optional(),
+      no_telepon: z.string().optional(),
+    }),
+  ),
+  withPrisma,
+  async (c) => {
+    const prisma = c.get('prisma')
+    const guru_id = c.get('jwtPayload').sub as number
+    const { nama_lengkap, password, sekolah_id, email, no_telepon } = c.req.valid('json')
+
+    const guru = await prisma.guru.update({
+      where: {
+        id: guru_id,
+      },
+      data: {
+        nama_lengkap,
+        password,
+        sekolah_id,
+        email,
+        no_telepon,
+      },
+    })
+
+    return c.json(guru)
+  },
+)
+
+app.delete('/guru/profile', withPrisma, async (c) => {
+  const prisma = c.get('prisma')
+  const guru_id = c.get('jwtPayload').sub as number
+
+  await prisma.guru.delete({
+    where: {
+      id: guru_id,
+    },
+  })
+
+  return c.json({ message: 'Guru deleted successfully' })
+})
+
 // login guru
 // nip, password, sekolah_id
 app.post(
@@ -617,9 +756,7 @@ app.get(
 
     babList.forEach((bab) => {
       // Sort topik in each bab by kode (assuming kode is like 'A', 'B', ...)
-      const topikInBab = topikList
-        .filter((topik) => topik.bab_id === bab.id)
-        .sort((a, b) => a!.kode!.localeCompare(b!.kode!))
+      const topikInBab = topikList.filter((topik) => topik.bab_id === bab.id).sort((a, b) => a!.kode!.localeCompare(b!.kode!))
 
       Object.assign(bab, {
         topik: topikInBab.map((topik) => {
@@ -640,8 +777,6 @@ app.get(
     return c.json(babList)
   },
 )
-
-
 
 // Generate PDF untuk peserta didik sendiri (tanpa auth guru)
 app.get('/peserta-didik/laporan-pdf', withPrisma, async (c) => {
@@ -687,7 +822,6 @@ app.get(
     const guru_id = c.get('jwtPayload').sub as number
 
     try {
-
       const pdfBuffer = await generateLaporanPdf(prisma, peserta_didik_id, guru_id)
 
       // Get peserta didik name for filename
@@ -718,7 +852,6 @@ app.get(
 )
 
 // Generate PDF Laporan untuk testing (tanpa auth) - khusus guru
-
 
 serve(
   {
