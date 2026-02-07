@@ -537,6 +537,7 @@ app.put(
       nama_lengkap: z.string().min(1).optional(),
       password: z.string().min(1).optional(),
       sekolah_id: z.number().int().positive().optional(),
+      nip: z.string().min(1).optional(),
       email: z.email().optional(),
       no_telepon: z.string().optional(),
     }),
@@ -545,7 +546,7 @@ app.put(
   async (c) => {
     const prisma = c.get('prisma')
     const guru_id = c.get('jwtPayload').sub as number
-    const { nama_lengkap, password, sekolah_id, email, no_telepon } = c.req.valid('json')
+    const { nama_lengkap, password, sekolah_id, nip, email, no_telepon } = c.req.valid('json')
 
     const guru = await prisma.guru.update({
       where: {
@@ -555,6 +556,7 @@ app.put(
         nama_lengkap,
         password,
         sekolah_id,
+        nip,
         email,
         no_telepon,
       },
