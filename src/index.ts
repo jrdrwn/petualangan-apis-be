@@ -267,7 +267,7 @@ app.get('/bab/topik', withPrisma, async (c) => {
     Object.assign(bab, {
       topik: topikInBab.map((topik, topikIdx) => {
         const nilaiQuiz = nilaiQuizList.find((nilai) => nilai.topik_id === topik.id)
-        let isUnlocked = false
+        let isUnlocked = true
 
         // if (babIdx === 0 && topikIdx === 0) {
         //   // Topik pertama bab pertama selalu terbuka
