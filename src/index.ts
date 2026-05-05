@@ -269,18 +269,18 @@ app.get('/bab/topik', withPrisma, async (c) => {
         const nilaiQuiz = nilaiQuizList.find((nilai) => nilai.topik_id === topik.id)
         let isUnlocked = false
 
-        if (babIdx === 0 && topikIdx === 0) {
-          // Topik pertama bab pertama selalu terbuka
-          isUnlocked = true
-        } else if (topikIdx === 0) {
-          // Topik pertama bab selain bab pertama, unlocked jika bab sudah unlocked
-          isUnlocked = unlocked
-        } else {
-          // Topik berikutnya unlocked jika topik sebelumnya sudah selesai
-          const prevTopik = topikInBab[topikIdx - 1]
-          const prevTopikSelesai = nilaiQuizList.some((nilai) => nilai.topik_id === prevTopik.id)
-          isUnlocked = prevTopikSelesai
-        }
+        // if (babIdx === 0 && topikIdx === 0) {
+        //   // Topik pertama bab pertama selalu terbuka
+        //   isUnlocked = true
+        // } else if (topikIdx === 0) {
+        //   // Topik pertama bab selain bab pertama, unlocked jika bab sudah unlocked
+        //   isUnlocked = unlocked
+        // } else {
+        //   // Topik berikutnya unlocked jika topik sebelumnya sudah selesai
+        //   const prevTopik = topikInBab[topikIdx - 1]
+        //   const prevTopikSelesai = nilaiQuizList.some((nilai) => nilai.topik_id === prevTopik.id)
+        //   isUnlocked = prevTopikSelesai
+        // }
 
         return {
           ...topik,
@@ -307,95 +307,95 @@ app.get(
     const peserta_didik_id = c.get('jwtPayload').sub as number
     const { topik_id } = c.req.valid('param')
 
-    // Ambil topik yang diminta
-    const topik = await prisma.topik.findUnique({
-      where: { id: topik_id },
-    })
-    if (!topik) {
-      return c.json({ error: 'Topik not found' }, 404)
-    }
+    // // Ambil topik yang diminta
+    // const topik = await prisma.topik.findUnique({
+    //   where: { id: topik_id },
+    // })
+    // if (!topik) {
+    //   return c.json({ error: 'Topik not found' }, 404)
+    // }
 
-    // Ambil bab dari topik
-    const bab = await prisma.bab.findUnique({
-      where: { id: topik.bab_id! },
-    })
-    if (!bab) {
-      return c.json({ error: 'Bab not found' }, 404)
-    }
+    // // Ambil bab dari topik
+    // const bab = await prisma.bab.findUnique({
+    //   where: { id: topik.bab_id! },
+    // })
+    // if (!bab) {
+    //   return c.json({ error: 'Bab not found' }, 404)
+    // }
 
-    // Ambil semua bab di kelas yang sama, urutkan
-    const babList = await prisma.bab.findMany({
-      where: { kelas_id: bab.kelas_id },
-      orderBy: { id: 'asc' },
-    })
+    // // Ambil semua bab di kelas yang sama, urutkan
+    // const babList = await prisma.bab.findMany({
+    //   where: { kelas_id: bab.kelas_id },
+    //   orderBy: { id: 'asc' },
+    // })
 
-    // Ambil semua topik di semua bab tersebut
-    const topikList = await prisma.topik.findMany({
-      where: {
-        bab: {
-          OR: babList.map((b) => ({ id: b.id })),
-        },
-      },
-    })
+    // // Ambil semua topik di semua bab tersebut
+    // const topikList = await prisma.topik.findMany({
+    //   where: {
+    //     bab: {
+    //       OR: babList.map((b) => ({ id: b.id })),
+    //     },
+    //   },
+    // })
 
-    // Ambil semua nilai quiz peserta didik untuk topik-topik tersebut
-    const nilaiQuizList = await prisma.nilai_quiz.findMany({
-      where: {
-        peserta_didik_id,
-        topik: {
-          OR: topikList.map((t) => ({ id: t.id })),
-        },
-      },
-    })
+    // // Ambil semua nilai quiz peserta didik untuk topik-topik tersebut
+    // const nilaiQuizList = await prisma.nilai_quiz.findMany({
+    //   where: {
+    //     peserta_didik_id,
+    //     topik: {
+    //       OR: topikList.map((t) => ({ id: t.id })),
+    //     },
+    //   },
+    // })
 
-    // Cek unlocked status untuk topik yang diminta
-    // Mirip logika di endpoint /bab/topik
-    let isUnlocked = false
-    let found = false
+    // // Cek unlocked status untuk topik yang diminta
+    // // Mirip logika di endpoint /bab/topik
+    // let isUnlocked = false
+    // let found = false
 
-    // Sort babList by id
-    babList.sort((a, b) => a.id - b.id)
+    // // Sort babList by id
+    // babList.sort((a, b) => a.id - b.id)
 
-    for (let babIdx = 0; babIdx < babList.length; babIdx++) {
-      const babItem = babList[babIdx]
-      // Sort topik in each bab by kode
-      const topikInBab = topikList.filter((t) => t.bab_id === babItem.id).sort((a, b) => a!.kode!.localeCompare(b!.kode!))
+    // for (let babIdx = 0; babIdx < babList.length; babIdx++) {
+    //   const babItem = babList[babIdx]
+    //   // Sort topik in each bab by kode
+    //   const topikInBab = topikList.filter((t) => t.bab_id === babItem.id).sort((a, b) => a!.kode!.localeCompare(b!.kode!))
 
-      let unlocked = false
-      if (babIdx === 0) {
-        unlocked = true
-      } else {
-        const prevBab = babList[babIdx - 1]
-        const prevTopik = topikList.filter((t) => t.bab_id === prevBab.id)
-        const allPrevTopikSelesai = prevTopik.every((t) => nilaiQuizList.some((nilai) => nilai.topik_id === t.id))
-        unlocked = allPrevTopikSelesai
-      }
+    //   let unlocked = false
+    //   if (babIdx === 0) {
+    //     unlocked = true
+    //   } else {
+    //     const prevBab = babList[babIdx - 1]
+    //     const prevTopik = topikList.filter((t) => t.bab_id === prevBab.id)
+    //     const allPrevTopikSelesai = prevTopik.every((t) => nilaiQuizList.some((nilai) => nilai.topik_id === t.id))
+    //     unlocked = allPrevTopikSelesai
+    //   }
 
-      for (let topikIdx = 0; topikIdx < topikInBab.length; topikIdx++) {
-        const t = topikInBab[topikIdx]
-        let unlockedTopik = false
-        if (babIdx === 0 && topikIdx === 0) {
-          unlockedTopik = true
-        } else if (topikIdx === 0) {
-          unlockedTopik = unlocked
-        } else {
-          const prevTopik = topikInBab[topikIdx - 1]
-          const prevTopikSelesai = nilaiQuizList.some((nilai) => nilai.topik_id === prevTopik.id)
-          unlockedTopik = prevTopikSelesai
-        }
+    //   for (let topikIdx = 0; topikIdx < topikInBab.length; topikIdx++) {
+    //     const t = topikInBab[topikIdx]
+    //     let unlockedTopik = false
+    //     if (babIdx === 0 && topikIdx === 0) {
+    //       unlockedTopik = true
+    //     } else if (topikIdx === 0) {
+    //       unlockedTopik = unlocked
+    //     } else {
+    //       const prevTopik = topikInBab[topikIdx - 1]
+    //       const prevTopikSelesai = nilaiQuizList.some((nilai) => nilai.topik_id === prevTopik.id)
+    //       unlockedTopik = prevTopikSelesai
+    //     }
 
-        if (t.id === topik_id) {
-          isUnlocked = unlockedTopik
-          found = true
-          break
-        }
-      }
-      if (found) break
-    }
+    //     if (t.id === topik_id) {
+    //       isUnlocked = unlockedTopik
+    //       found = true
+    //       break
+    //     }
+    //   }
+    //   if (found) break
+    // }
 
-    if (!isUnlocked) {
-      return c.json({ error: 'Topik belum terbuka/unlocked' }, 403)
-    }
+    // if (!isUnlocked) {
+    //   return c.json({ error: 'Topik belum terbuka/unlocked' }, 403)
+    // }
 
     const quizList = await prisma.quiz.findMany({
       where: {
